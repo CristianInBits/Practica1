@@ -1,12 +1,35 @@
 #!/bin/bash
 
+#######  DOCUMENTACIÓN
+# Definiciones de códigos de salida
+SUCCES=0
+ERROR_GENERIC=1
+ERROR_FILE_NOT_FOUND=2
+ERROR_PERMISSION_DENIED=3
+
+# Ruta del archivo auth.log
+AUTH_LOG="./auth.log"
+# Ruta del archivo info_user.log
+LOG_FILE="./info_user.log"
+
+{
+#Mensajes de salida
+echo ""
+echo "----------------------------------------"
+echo "Usuario que ejecuta el script: $(whoami)"
+echo "Fecha y hora de ejecución: $(date)"
+echo "Versión de Bash: $BASH_VERSION"
+echo "----------------------------------------"
+echo ""
+
+
 # Ruta del archivo auth.log
 AUTH_LOG="./auth.log"
 
 # Funcion Output de --help y 0 argumentos
 function echoHelp(){
 	echo -e "$0 [-u usuario]|[-g grupo]|[--login]|[--help]\n\t-u usuario\tMostrar información sobre el usuario especificado\n\t-g grupo\tMostrar usuarios asociados al grupo especificado\n\t--login \tMostrar los 5 últimos usuarios que han accedido al sistema\n\t--help \t\tMostrar ayuda"
-	exit 1
+	exit $SUCCES
 }
 
 # más de dos argumentos
@@ -19,7 +42,7 @@ elif test $# -eq 2; then
 	# -u
 	if test "$1" = "-u"; then
 		# Comprobar si uario existe
-		if cat /etc/passwd | grep "^$2:"; then
+		if cat /etc/passwd | grep -wq "^$2:*"; then
 			# Comprobar si el usuario introducio es el actual de la sesión
 			if who | grep -wq "$2"; then
 				echo "el usuario $2 está conectado actualmente"
@@ -40,10 +63,10 @@ elif test $# -eq 2; then
 			grep -E "pam_unix\(.*\): session opened for user" $AUTH_LOG | grep -Ev "root|CRON|ssh" | grep -w "$2" | cut -d ' ' -f1,2,3 | tail -5
 			echo ""
 			# Grupos a los que pertenece
-			grupos=$(cat /etc/group | grep "$2" | cut -d: -f1 | tr '\n' "," | sed 's/,$//')
+			grupos=$(cat /etc/group | grep -w "$2" | cut -d: -f1 | tr '\n' "," | sed 's/,$//')
 			# ---Comprobar si pertenece a algún grupo:
 			if test -z "$grupos";then
-				echo "el usuario $2 no pertenece a ningún grupo listado en /etc/group."
+				echo "el usuario $2 no existe en el sistema"
 				echo ""
 			else
 				echo "$2 pertenece a los siguientes grupos : $grupos"
@@ -61,10 +84,19 @@ elif test $# -eq 2; then
 			echo "El usuario $2 no existe en el sistema"
 			exit 1
 		fi
-	fi
 	# -g
-	echo "u-g"
-	exit 3
+	elif test "$1" = "-g"; then
+		# Comprobar si el grupo existe:
+		grupos=$(cat /etc/group | grep -w "$2" | cut -d: -f1)
+		if test -z "$grupos"; then
+			echo "El grupo $2 no existe en el sistema"
+			exit 3
+		else
+			echo "Usuarios en el grupo $2:"
+			echo "$grupos"
+			exit 2
+		fi
+	fi
 
 # un argumento
 elif test $# -eq 1; then
@@ -78,7 +110,7 @@ elif test $# -eq 1; then
 		echo "las últimas 5 conexiones LOCALES son:"
 		echo "-------------------------------------------"
 		grep -E "pam_unix\(.*\): session opened for user" $AUTH_LOG | grep -Ev "root|CRON|sshd" | cut -d ' ' -f1,2,3,11 | tail -5
-		exit 5
+		exit 2
 	fi
 
 	# -u
@@ -105,3 +137,4 @@ elif test $# -eq 1; then
 elif test $# -eq 0; then
 	echoHelp
 fi
+} | tee -a $LOG_FILE
