@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Ruta del archivo auth.log
-AUTH_LOG="/home/cristianinbits/SSOO/Practica1/auth.log"
+AUTH_LOG="./auth.log"
 
 # Funcion Output de --help y 0 argumentos
 function echoHelp(){
@@ -17,7 +17,51 @@ if test $# -gt 2; then
 # dos argumentos
 elif test $# -eq 2; then
 	# -u
+	if test "$1" = "-u"; then
+		# Comprobar si uario existe
+		if cat /etc/passwd | grep "^$2:"; then
+			# Comprobar si el usuario introducio es el actual de la sesión
+			if who | grep -wq "$2"; then
+				echo "el usuario $2 está conectado actualmente"
+				echo ""
+			else
+				echo "el usuario $2 NO está conectado actualmente"
+				echo ""
+			fi
+			# Mostrar las 5 conexiones REMOTAS:
+		 	echo ""
+			echo "las últimas 5 conexiones REMOTAS son:"
+			echo "---------------------------------------"
+			grep -E "sshd\[[0-9]+\]: Accepted password for [a-zA-Z0-9_\-]+ from [0-9.]+ port [0-9]+ ssh2" ./auth.log | grep -w "$2" | cut -d ' ' -f1,2,3,11 | tail -5
+			echo ""
+			# Mostrar las 5 conexiones LOCALES:
+			echo "las últimas 5 conexiones LOCALES son:"
+			echo "-------------------------------------------"
+			grep -E "pam_unix\(.*\): session opened for user" $AUTH_LOG | grep -Ev "root|CRON|ssh" | grep -w "$2" | cut -d ' ' -f1,2,3 | tail -5
+			echo ""
+			# Grupos a los que pertenece
+			grupos=$(cat /etc/group | grep "$2" | cut -d: -f1 | tr '\n' "," | sed 's/,$//')
+			# ---Comprobar si pertenece a algún grupo:
+			if test -z "$grupos";then
+				echo "el usuario $2 no pertenece a ningún grupo listado en /etc/group."
+				echo ""
+			else
+				echo "$2 pertenece a los siguientes grupos : $grupos"
+				echo ""
+			fi
+			# Comprobar el espacio ocupado por la carpeta del usuario
+			echo "Espacio ocupado por la carpeta de $2 (/home/$2): $(du -sh /home/$2 | cut -f1)"
+			echo ""
+			# Comprobar cuantos archivos > 1MB contiene
+			echo "Contiene $(find /home/$2 -type f -size +1M | wc -l) ficheros mayores de 1MB en la carpeta /home/$2"
+			exit 1
 
+		# Usuario NO existe
+		else
+			echo "El usuario $2 no existe en el sistema"
+			exit 1
+		fi
+	fi
 	# -g
 	echo "u-g"
 	exit 3
@@ -33,7 +77,7 @@ elif test $# -eq 1; then
 		echo ""
 		echo "las últimas 5 conexiones LOCALES son:"
 		echo "-------------------------------------------"
-		grep -E "pam_unix\(.*\): session opened for user" ./auth.log | grep -Ev "root|CRON|sshd" | cut -d ' ' -f1,2,3,11 | tail -5
+		grep -E "pam_unix\(.*\): session opened for user" $AUTH_LOG | grep -Ev "root|CRON|sshd" | cut -d ' ' -f1,2,3,11 | tail -5
 		exit 5
 	fi
 
