@@ -3,7 +3,7 @@
 #######  DOCUMENTACIÓN
 # Definiciones de códigos de salida
 SUCCES=0
-ERROR_GENERIC=1
+ERROR_NO_GENERIC=1
 ERROR_NOT_FOUND=2
 ERROR_PERMISSION_DENIED=3
 ERROR_ARGS=4
@@ -136,6 +136,6 @@ elif test $# -eq 0; then
 	exit $ERROR_ARGS
 else
 	echo "ERROR Desconocido"
-	exit $ERROR_GENERIC
+	exit $ERROR_NO_GENERIC
 fi
 } | sudo tee -a $LOG_FILE
