@@ -66,6 +66,7 @@ elif test $# -eq 2; then
 			if test $? -eq 1; then
 				echo "Error: Permiso Denegado. No se puede leer el contenido del directorio."
 				exit $ERROR_PERMISSION_DENNIED
+			# NOTA: Si se quire acceder a los directorios sin ser los usuarios propietarios, se puede escalar privilegios de root cambiando du por sudo du en la línea 64.
 			# --- Si no existe conflicto de permisos:
 			else
 				echo "Espacio ocupado por la carpeta de $2 (/home/$2): $espacio" | sed 's/[ \t][^ \t]*$//'
